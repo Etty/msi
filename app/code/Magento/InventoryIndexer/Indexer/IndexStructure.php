@@ -24,6 +24,7 @@ class IndexStructure implements IndexStructureInterface
      */
     const SKU = 'sku';
     const QUANTITY = 'quantity';
+    const IS_AVAILABLE = 'is_available';
     /**#@-*/
 
     /**
@@ -106,6 +107,14 @@ class IndexStructure implements IndexStructureInterface
                 Table::OPTION_SCALE => 4,
             ],
             'Quantity'
+        )->addColumn(
+            self::IS_AVAILABLE,
+            Table::TYPE_BOOLEAN,
+            null,
+            [
+                Table::OPTION_NULLABLE => false,
+            ],
+            'Availability'
         );
         $connection->createTable($table);
     }
