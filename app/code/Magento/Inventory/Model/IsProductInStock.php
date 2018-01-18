@@ -8,6 +8,8 @@ declare(strict_types=1);
 namespace Magento\Inventory\Model;
 
 use Magento\InventoryApi\Api\IsProductInStockInterface;
+use Magento\InventoryIndexer\Indexer\IndexStructure;
+use Magento\InventoryIndexer\Model\StockIndexTableNameResolverInterface;
 
 /**
  * Return product availability by Product SKU and Stock Id (stock data + reservations)
@@ -15,25 +17,17 @@ use Magento\InventoryApi\Api\IsProductInStockInterface;
 class IsProductInStock implements IsProductInStockInterface
 {
     /**
-     * @var GetStockItemQuantityInterface
+     * @var StockIndexTableNameResolverInterface
      */
-    private $getStockItemQuantity;
+    private $stockIndexTableNameResolver;
 
     /**
-     * @var GetReservationsQuantityInterface
-     */
-    private $getReservationsQuantity;
-
-    /**
-     * @param GetStockItemQuantityInterface $getStockItemQuantity
-     * @param GetReservationsQuantityInterface $getReservationsQuantity
+     * @param StockIndexTableNameResolverInterface $stockIndexTableNameResolver
      */
     public function __construct(
-        GetStockItemQuantityInterface $getStockItemQuantity,
-        GetReservationsQuantityInterface $getReservationsQuantity
+        StockIndexTableNameResolverInterface $stockIndexTableNameResolver
     ) {
-        $this->getStockItemQuantity = $getStockItemQuantity;
-        $this->getReservationsQuantity = $getReservationsQuantity;
+        $this->stockIndexTableNameResolver = $stockIndexTableNameResolver;
     }
 
     /**
@@ -41,8 +35,14 @@ class IsProductInStock implements IsProductInStockInterface
      */
     public function execute(string $sku, int $stockId): bool
     {
-        $productQtyInStock = $this->getStockItemQuantity->execute($sku, $stockId) +
-            $this->getReservationsQuantity->execute($sku, $stockId);
-        return $productQtyInStock > 0;
+        $indexTableName = $this->stockIndexTableNameResolver->execute($stockId);
+
+        $connection = $this->resource->getConnection();
+        $select = $connection->select()
+            ->from($indexTableName, [IndexStructure::IS_AVAILABLE])
+            ->where(IndexStructure::SKU . ' = ?', $sku);
+
+        $isAvailable = $connection->fetchOne($select);
+        return $isAvailable;
     }
 }
