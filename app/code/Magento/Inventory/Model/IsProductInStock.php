@@ -7,12 +7,13 @@ declare(strict_types=1);
 
 namespace Magento\Inventory\Model;
 
+use Magento\Framework\App\ResourceConnection;
 use Magento\InventoryApi\Api\IsProductInStockInterface;
 use Magento\InventoryIndexer\Indexer\IndexStructure;
 use Magento\InventoryIndexer\Model\StockIndexTableNameResolverInterface;
 
 /**
- * Return product availability by Product SKU and Stock Id (stock data + reservations)
+ * Return product availability by Product SKU and Stock Id.
  */
 class IsProductInStock implements IsProductInStockInterface
 {
@@ -22,12 +23,20 @@ class IsProductInStock implements IsProductInStockInterface
     private $stockIndexTableNameResolver;
 
     /**
+     * @var \Magento\Framework\App\ResourceConnection
+     */
+    private $resource;
+
+    /**
      * @param StockIndexTableNameResolverInterface $stockIndexTableNameResolver
+     * @param ResourceConnection $resource
      */
     public function __construct(
-        StockIndexTableNameResolverInterface $stockIndexTableNameResolver
+        StockIndexTableNameResolverInterface $stockIndexTableNameResolver,
+        ResourceConnection $resource
     ) {
         $this->stockIndexTableNameResolver = $stockIndexTableNameResolver;
+        $this->resource = $resource;
     }
 
     /**
@@ -36,13 +45,12 @@ class IsProductInStock implements IsProductInStockInterface
     public function execute(string $sku, int $stockId): bool
     {
         $indexTableName = $this->stockIndexTableNameResolver->execute($stockId);
-
         $connection = $this->resource->getConnection();
         $select = $connection->select()
             ->from($indexTableName, [IndexStructure::IS_AVAILABLE])
             ->where(IndexStructure::SKU . ' = ?', $sku);
-
         $isAvailable = $connection->fetchOne($select);
-        return $isAvailable;
+
+        return (bool)$isAvailable;
     }
 }

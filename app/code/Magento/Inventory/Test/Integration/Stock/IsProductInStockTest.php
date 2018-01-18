@@ -7,10 +7,15 @@ declare(strict_types=1);
 
 namespace Magento\Inventory\Test\Integration\Stock;
 
+use Magento\Catalog\Api\ProductRepositoryInterface;
+use Magento\Framework\Api\SearchCriteriaBuilder;
 use Magento\Inventory\Model\CleanupReservationsInterface;
+use Magento\InventoryApi\Api\Data\SourceItemInterface;
 use Magento\InventoryApi\Api\IsProductInStockInterface;
 use Magento\InventoryApi\Api\ReservationBuilderInterface;
 use Magento\InventoryApi\Api\AppendReservationsInterface;
+use Magento\InventoryApi\Api\SourceItemRepositoryInterface;
+use Magento\InventoryApi\Api\SourceItemsSaveInterface;
 use Magento\TestFramework\Helper\Bootstrap;
 use PHPUnit\Framework\TestCase;
 
@@ -36,12 +41,37 @@ class IsProductInStockTest extends TestCase
      */
     private $isProductInStock;
 
+    /**
+     * @var ProductRepositoryInterface
+     */
+    private $productRepository;
+
+    /**
+     * @var  SearchCriteriaBuilder
+     */
+    private $searchCriteriaBuilder;
+
+    /**
+     * @var SourceItemsSaveInterface
+     */
+    private $sourceItemsSave;
+
+    /**
+     * @var GetProductQuantityInStockInterface
+     */
+    private $getProductQuantityInStock;
+
     protected function setUp()
     {
         $this->reservationBuilder = Bootstrap::getObjectManager()->get(ReservationBuilderInterface::class);
         $this->appendReservations = Bootstrap::getObjectManager()->get(AppendReservationsInterface::class);
         $this->cleanupReservations = Bootstrap::getObjectManager()->get(CleanupReservationsInterface::class);
         $this->isProductInStock = Bootstrap::getObjectManager()->get(IsProductInStockInterface::class);
+        $this->productRepository = Bootstrap::getObjectManager()->get(ProductRepositoryInterface::class);
+        $this->searchCriteriaBuilder = Bootstrap::getObjectManager()->get(SearchCriteriaBuilder::class);
+        $this->sourceItemRepository =  Bootstrap::getObjectManager()->get(SourceItemRepositoryInterface::class);
+        $this->sourceItemsSave = Bootstrap::getObjectManager()->get(SourceItemsSaveInterface::class);
+        $this->getProductQuantityInStock = Bootstrap::getObjectManager()->get(GetProductQuantityInStockInterface::class);
     }
 
     /**
@@ -55,6 +85,55 @@ class IsProductInStockTest extends TestCase
     {
         self::assertTrue($this->isProductInStock->execute('SKU-1', 10));
     }
+
+    /**
+     * Tests product is available if product quantity is 0 but it's status in some active source is set to 1.
+     *
+     * @magentoDataFixture ../../../../app/code/Magento/InventoryApi/Test/_files/products.php
+     * @magentoDataFixture ../../../../app/code/Magento/InventoryApi/Test/_files/sources.php
+     * @magentoDataFixture ../../../../app/code/Magento/InventoryApi/Test/_files/stocks.php
+     * @magentoDataFixture ../../../../app/code/Magento/InventoryApi/Test/_files/stock_source_link.php
+     * @magentoDataFixture ../../../../app/code/Magento/InventoryApi/Test/_files/source_items.php
+     * @dataProvider productIsInStockWithZeroQuantityDataProvider
+     * @param string $sku
+     * @param int $stockId
+     * @param string $sourceCode
+     * @param bool $expected
+     */
+    public function testProductIsInStockWithZeroQuantity(string $sku, int $stockId, string $sourceCode, bool $expected)
+    {
+        // Testing initial stock status.
+        self::assertEquals($this->isProductInStock->execute($sku, $stockId), $expected);
+
+        $searchCriteria = $this->searchCriteriaBuilder
+            ->addFilter(SourceItemInterface::SKU, [$sku], 'in')
+            ->addFilter(SourceItemInterface::SOURCE_CODE, $sourceCode)
+            ->create();
+        $sourceItems = $this->sourceItemRepository->getList($searchCriteria)->getItems();
+        foreach ($sourceItems as $sourceItem) {
+            $sourceItem->setQuantity(0);
+        }
+        $this->sourceItemsSave->execute($sourceItems);
+
+        // Assuming stock quantity successfully changed.
+        self::assertEmpty($this->getProductQuantityInStock->execute($sku, $stockId));
+        // Testing final stock status.
+        self::assertEquals($this->isProductInStock->execute($sku, $stockId), $expected);
+    }
+
+    /**
+     * Data provider for testProductIsInStockWithZeroQuantity.
+     *
+     * @return array
+     */
+    public function productIsInStockWithZeroQuantityDataProvider()
+    {
+        return [
+            ['SKU-2', 30, 'US-1', true], // Enabled in fixture
+            ['SKU-3', 10, 'EU-2', false], // Disabled in fixture
+        ];
+    }
+
 
     /**
      * @magentoDataFixture ../../../../app/code/Magento/InventoryApi/Test/_files/products.php
