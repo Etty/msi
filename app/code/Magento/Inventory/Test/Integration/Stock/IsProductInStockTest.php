@@ -11,6 +11,7 @@ use Magento\Catalog\Api\ProductRepositoryInterface;
 use Magento\Framework\Api\SearchCriteriaBuilder;
 use Magento\Inventory\Model\CleanupReservationsInterface;
 use Magento\InventoryApi\Api\Data\SourceItemInterface;
+use Magento\InventoryApi\Api\GetProductQuantityInStockInterface;
 use Magento\InventoryApi\Api\IsProductInStockInterface;
 use Magento\InventoryApi\Api\ReservationBuilderInterface;
 use Magento\InventoryApi\Api\AppendReservationsInterface;
