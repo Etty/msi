@@ -24,7 +24,7 @@ class IndexStructure implements IndexStructureInterface
      */
     const SKU = 'sku';
     const QUANTITY = 'quantity';
-    const IS_AVAILABLE = 'is_available';
+    const IS_SALABLE = 'is_salable';
     /**#@-*/
 
     /**
@@ -108,7 +108,7 @@ class IndexStructure implements IndexStructureInterface
             ],
             'Quantity'
         )->addColumn(
-            self::IS_AVAILABLE,
+            self::IS_SALABLE,
             Table::TYPE_BOOLEAN,
             null,
             [

@@ -67,7 +67,7 @@ class SelectBuilder
                     SourceItemInterface::SKU,
                     SourceItemInterface::QUANTITY => 'SUM(IF(source_item.' . SourceItemInterface::STATUS . ' = '
                         . SourceItemInterface::STATUS_OUT_OF_STOCK . ', 0, ' . SourceItemInterface::QUANTITY . '))',
-                    IndexStructure::IS_AVAILABLE => 'MAX(' . SourceItemInterface::STATUS . ')',
+                    IndexStructure::IS_SALABLE => 'MAX(' . SourceItemInterface::STATUS . ')',
                 ]
             )
             ->joinLeft(

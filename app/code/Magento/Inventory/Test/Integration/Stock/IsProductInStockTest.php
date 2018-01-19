@@ -96,17 +96,12 @@ class IsProductInStockTest extends TestCase
      * @magentoDataFixture ../../../../app/code/Magento/InventoryApi/Test/_files/stock_source_link.php
      * @magentoDataFixture ../../../../app/code/Magento/InventoryApi/Test/_files/source_items.php
      * @dataProvider productIsInStockWithZeroQuantityDataProvider
+     * @expectedException \Magento\Framework\Validation\ValidationException
      * @param string $sku
-     * @param int $stockId
      * @param string $sourceCode
-     * @param bool $expected
      */
-    public function testProductIsInStockWithZeroQuantity(string $sku, int $stockId, string $sourceCode, bool $expected)
-    {
-        // Testing initial stock status.
-        self::assertEquals($this->isProductInStock->execute($sku, $stockId), $expected);
-
-        $searchCriteria = $this->searchCriteriaBuilder
+    public function testProductIsInStockWithZeroQuantity(string $sku, string $sourceCode)
+    {        $searchCriteria = $this->searchCriteriaBuilder
             ->addFilter(SourceItemInterface::SKU, [$sku], 'in')
             ->addFilter(SourceItemInterface::SOURCE_CODE, $sourceCode)
             ->create();
@@ -115,11 +110,6 @@ class IsProductInStockTest extends TestCase
             $sourceItem->setQuantity(0);
         }
         $this->sourceItemsSave->execute($sourceItems);
-
-        // Assuming stock quantity successfully changed.
-        self::assertEmpty($this->getProductQuantityInStock->execute($sku, $stockId));
-        // Testing final stock status.
-        self::assertEquals($this->isProductInStock->execute($sku, $stockId), $expected);
     }
 
     /**
@@ -130,8 +120,7 @@ class IsProductInStockTest extends TestCase
     public function productIsInStockWithZeroQuantityDataProvider()
     {
         return [
-            ['SKU-2', 30, 'US-1', true], // Enabled in fixture
-            ['SKU-3', 10, 'EU-2', false], // Disabled in fixture
+            ['SKU-2', 'US-1'],
         ];
     }
 
